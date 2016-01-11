@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- USB Oximeter -->
+    <usb-device vendor-id="1204" product-id="62002" />
+</resources>
