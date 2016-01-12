@@ -1,8 +1,5 @@
 package com.berry_med.spo2_usb.OximeterData;
 
-import android.bluetooth.BluetoothGattCharacteristic;
-
-import com.berry_med.spo2_ble.BluetoothLeService;
 
 /**
  * Created by ZXX on 2015/8/31.
@@ -36,9 +33,9 @@ public class PackageParser
         if(spo2 != mOxiParams.spo2 || pulseRate != mOxiParams.pulseRate || pi != mOxiParams.pi)
         {
             mOxiParams.update(spo2,pulseRate,pi);
-            mOnDataChangeListener.onSpO2ParamsChanged();
+            mOnDataChangeListener.onParamsChanged();
         }
-        mOnDataChangeListener.onSpO2WaveChanged(packageDat[1]);
+        mOnDataChangeListener.onWaveChanged(packageDat[1]);
     }
 
     /**
@@ -46,8 +43,8 @@ public class PackageParser
      */
     public interface OnDataChangeListener
     {
-        void onSpO2ParamsChanged();
-        void onSpO2WaveChanged(int wave);
+        void onParamsChanged();
+        void onWaveChanged(int wave);
     }
 
 
@@ -62,6 +59,9 @@ public class PackageParser
      */
     public class OxiParams
     {
+        public final int SPO2_INVALID_VALUE = 127;
+        public final int PULSE_RATE_INVALID_VALUE = 255;
+
         private int spo2;
         private int pulseRate;
         private int pi;             //perfusion index
@@ -90,32 +90,4 @@ public class PackageParser
         return mOxiParams;
     }
 
-    /**
-     *
-     * Modify the Bluetooth Name On the Air.
-     *
-     * @param service service of BluetoothLeService
-     *
-     * @param ch      characteristic of Modify Bluetooth Name
-     *                if this characteristic not found, the function
-     *                of modify not support.
-     *
-     * @param btName  length of btName should not more than 26 bytes.
-     *                the bytes more then 26 bytes will be ignored.
-     */
-    public static void modifyBluetoothName(BluetoothLeService service,
-                                           BluetoothGattCharacteristic ch,
-                                           String                      btName)
-    {
-        if(service == null || ch == null)
-            return;
-
-        byte[] b = btName.getBytes();
-        byte[] bytes = new byte[b.length+2];
-        bytes[0] = 0x00;
-        bytes[1] = (byte) b.length;
-        System.arraycopy(b,0,bytes,2,b.length);
-
-        service.write(ch,bytes);
-    }
 }
