@@ -1,4 +1,4 @@
-package com.berry_med.spo2_usb.DataParser;
+package com.berry_med.spo2_usb.OximeterData;
 
 import java.util.concurrent.LinkedBlockingQueue;
 
