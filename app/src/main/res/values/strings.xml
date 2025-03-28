@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">spo2_usb</string>
     <string name="action_settings">Settings</string>
+    <string name="read_data">Read Data</string>
 
-    <string name="str_getsource">Get Source >>></string>
+    <string name="str_source">Get Source >>></string>
 </resources>

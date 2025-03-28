@@ -11,7 +11,9 @@ public class DataParser {
     public String TAG = this.getClass().getSimpleName();
 
     //Protocol Type
-    public static enum  Protocol {BCI, BERRY};
+    public static enum Protocol {BCI, BERRY}
+
+    ;
     private int BERRY_LEN = 18;
 
     //Buffer queue
@@ -19,8 +21,8 @@ public class DataParser {
 
     //Parse Runnable
     private ParseRunnable mParseRunnable;
-    private boolean       isStop = true;
-    private Protocol      mCurProtocol;
+    private boolean isStop = true;
+    private Protocol mCurProtocol;
 
     private onPackageReceivedListener mListener;
 
@@ -28,27 +30,23 @@ public class DataParser {
     /**
      * interface for parameters changed.
      */
-    public interface onPackageReceivedListener
-    {
+    public interface onPackageReceivedListener {
         void onPackageReceived(int[] dat);
     }
 
     //Constructor
-    public DataParser(Protocol protocol, onPackageReceivedListener listener)
-    {
+    public DataParser(Protocol protocol, onPackageReceivedListener listener) {
         this.mCurProtocol = protocol;
-        this.mListener    = listener;
+        this.mListener = listener;
 
     }
 
-    public void start()
-    {
+    public void start() {
         mParseRunnable = new ParseRunnable();
         new Thread(mParseRunnable).start();
     }
 
-    public void stop()
-    {
+    public void stop() {
         isStop = true;
     }
 
@@ -58,25 +56,22 @@ public class DataParser {
     class ParseRunnable implements Runnable {
         int dat;
         int[] packageData;
+
         @Override
         public void run() {
-            while (isStop)
-            {
-                switch (mCurProtocol)
-                {
+            while (isStop) {
+                switch (mCurProtocol) {
                     case BCI:
                         dat = getData();
                         packageData = new int[5];
-                        if((dat & 0x80) > 0) //search package head
+                        if ((dat & 0x80) > 0) //search package head
                         {
                             packageData[0] = dat;
-                            for(int i = 1; i < packageData.length; i++)
-                            {
+                            for (int i = 1; i < packageData.length; i++) {
                                 dat = getData();
-                                if((dat & 0x80) == 0) {
+                                if ((dat & 0x80) == 0) {
                                     packageData[i] = dat;
-                                }
-                                else {
+                                } else {
                                     continue;
                                 }
                             }
@@ -85,14 +80,13 @@ public class DataParser {
                         break;
                     case BERRY:
                         dat = getData();
-                        if(dat == 0x55){
+                        if (dat == 0x55) {
                             dat = getData();
-                            if(dat == 0xaa){
+                            if (dat == 0xaa) {
                                 packageData = new int[BERRY_LEN];
                                 packageData[0] = 0x55;
                                 packageData[1] = 0xaa;
-                                for(int i = 2; i < BERRY_LEN; i++)
-                                {
+                                for (int i = 2; i < BERRY_LEN; i++) {
                                     packageData[i] = getData();
                                 }
                                 mListener.onPackageReceived(packageData);
@@ -107,12 +101,11 @@ public class DataParser {
 
     /**
      * Add the data received from USB or Bluetooth
+     *
      * @param dat
      */
-    public void add(byte[] dat)
-    {
-        for(byte b : dat)
-        {
+    public void add(byte[] dat) {
+        for (byte b : dat) {
             try {
                 bufferQueue.put(toUnsignedInt(b));
             } catch (InterruptedException e) {
@@ -123,10 +116,10 @@ public class DataParser {
 
     /**
      * Get Dat from Queue
+     *
      * @return
      */
-    private int getData()
-    {
+    private int getData() {
         int dat = 0;
         try {
             dat = bufferQueue.take();

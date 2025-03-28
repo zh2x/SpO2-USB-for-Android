@@ -1,159 +1,66 @@
 package com.berry_med.spo2_usb.USBSerial;
 
+import android.app.PendingIntent;
 import android.content.Context;
-import android.hardware.usb.UsbDevice;
+import android.content.Intent;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 
+import com.berry_med.spo2_usb.OximeterData.DataParser;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
+import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
- * 管理USB插入拔出和数据接收
+ * Manage USB plug-in and unplugging and data receiving
  * Created by ZXX on 2015/12/29.
  */
 public class USBCommManager {
+    private static final String USB_PERMISSION = "com.android.example.USB_PERMISSION";
+    protected UsbManager mUsbManager;
+    protected Context context;
+    protected DataParser mDataParser;
 
-    //Const
-    public String TAG = USBCommManager.class.getSimpleName();
-
-    private static Context            mContext;
-    private static USBCommManager     mUSBCommManager;
-    private USBCommListener           mListener;
-
-    //定时扫描USB状态
-    private boolean               mIsPlugged;
-    private List<UsbSerialDriver> availableDrivers;
-
-    private UsbManager         mUsbManager;
-    private UsbSerialPort      mSerialPort;
-
-
-    //构造 单例模式
-    private USBCommManager() {
-        mUsbManager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
+    public USBCommManager(Context context, DataParser mDataParser) {
+        this.context = context;
+        this.mDataParser = mDataParser;
+        mUsbManager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
     }
-    public static  USBCommManager getUSBManager(Context context)
-    {
-        if(mUSBCommManager == null){
-            mContext = context;
-            mUSBCommManager = new USBCommManager();
+
+    public void usbSerialPort() {
+        List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(mUsbManager);
+        if (availableDrivers.isEmpty()) return;
+        UsbSerialDriver driver = availableDrivers.get(0);
+        UsbDeviceConnection connection = mUsbManager.openDevice(driver.getDevice());
+        if (connection == null) {
+            // requestPermission
+            PendingIntent permissionIntent = PendingIntent.getBroadcast(
+                    context, 0, new Intent(USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
+            mUsbManager.requestPermission(driver.getDevice(), permissionIntent);
+            return;
         }
-
-        return mUSBCommManager;
-    }
-
-    //Listener
-    public void setListener(USBCommListener listener)
-    {
-        mListener = listener;
-    }
-
-    /**
-     * 初始化连接
-     */
-    public void initConnection()
-    {
-        //创建连接
-        availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(mUsbManager);
-        if(availableDrivers.size() > 0){
-            buildConnection();
-            mIsPlugged = true;
-
-            mListener.onUSBStateChanged(mIsPlugged);
-            //定时扫描状态
-            startScan();
-        }
-
-
-    }
-
-    //定时扫描USB设备
-    private void startScan() {
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (mIsPlugged)
-                {
-                    availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(mUsbManager);
-                    if(availableDrivers.size() == 0){
-                        mIsPlugged = false;
-                    }
-
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-
-                    //Log.i(TAG, " USB scan....--------------------"+ mIsPlugged);
-                }
-
-                mListener.onUSBStateChanged(mIsPlugged);
-            }
-        }).start();
-
-
-
-    }
-
-    /**
-     * 建立连接 读取数据
-     */
-    private void buildConnection() {
-        UsbSerialDriver     driver     = availableDrivers.get(0);
-        UsbDevice           usbDevice  = driver.getDevice();
-        UsbDeviceConnection connection = mUsbManager.openDevice(usbDevice);
-
-        mSerialPort = driver.getPorts().get(0);
+        UsbSerialPort port = driver.getPorts().get(0);
         try {
-            mSerialPort.open(connection);
-        } catch (IOException e) {
+            port.open(connection);
+            port.setParameters(115200, UsbSerialPort.DATABITS_8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+        } catch (Exception e) {
             e.printStackTrace();
         }
-
-
-        new Thread(new Runnable() {
+        if (port == null) return;
+        SerialInputOutputManager usbIoManager = new SerialInputOutputManager(port, new SerialInputOutputManager.Listener() {
             @Override
-            public void run() {
-                while (mIsPlugged) {
-                    try {
-                        byte buffer[] = new byte[32];
-                        int numBytesRead = mSerialPort.read(buffer, 100);
-                        if(numBytesRead > 0)
-                        {
-                            byte[] dat = new byte[numBytesRead];
-                            System.arraycopy(buffer, 0, dat, 0, numBytesRead);
-                            //Log.d("USB_SERIAL", "Read " + numBytesRead + " bytes.");
-                            mListener.onReceiveData(dat);
-                        }
-
-                    } catch (IOException e) {
-                        // Deal with error.
-                    }
-                }
+            public void onNewData(byte[] data) {
+                mDataParser.add(data);
             }
-        }).start();
-    }
 
-    /**
-     * 获取USB插拔状态
-     * @return USB状态
-     */
-    public boolean isPlugged()
-    {
-        return mIsPlugged;
-    }
+            @Override
+            public void onRunError(Exception e) {
 
-    //数据传输接口
-    public interface USBCommListener
-    {
-        void onReceiveData(byte[] dat);
-        void onUSBStateChanged(boolean isPlugged);
+            }
+        });
+        usbIoManager.start();
     }
 }

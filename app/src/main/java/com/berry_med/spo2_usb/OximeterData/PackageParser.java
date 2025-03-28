@@ -3,20 +3,18 @@ package com.berry_med.spo2_usb.OximeterData;
 
 /**
  * Created by ZXX on 2015/8/31.
- *
+ * <p>
  * Add all data from oximeter into a Queue, and then Parsing the data as the protocol manual.
  * If you want more details about the protocol, click the link below.
- *
- *     https://github.com/zh2x/BCI_Protocol_Demo/tree/master/protocol_manual
+ * <p>
+ * https://github.com/zh2x/BCI_Protocol_Demo/tree/master/protocol_manual
  */
-public class PackageParser
-{
+public class PackageParser {
 
     private OxiParams mOxiParams;
     private OnDataChangeListener mOnDataChangeListener;
 
-    public PackageParser(OnDataChangeListener onDataChangeListener)
-    {
+    public PackageParser(OnDataChangeListener onDataChangeListener) {
         this.mOnDataChangeListener = onDataChangeListener;
 
         mOxiParams = new OxiParams();
@@ -26,13 +24,12 @@ public class PackageParser
 
         int spo2, pulseRate, pi;
 
-        spo2      = packageDat[4];
+        spo2 = packageDat[4];
         pulseRate = packageDat[3] | ((packageDat[2] & 0x40) << 1);
-        pi        = packageDat[0] & 0x0f;
+        pi = packageDat[0] & 0x0f;
 
-        if(spo2 != mOxiParams.spo2 || pulseRate != mOxiParams.pulseRate || pi != mOxiParams.pi)
-        {
-            mOxiParams.update(spo2,pulseRate,pi);
+        if (spo2 != mOxiParams.spo2 || pulseRate != mOxiParams.pulseRate || pi != mOxiParams.pi) {
+            mOxiParams.update(spo2, pulseRate, pi);
             mOnDataChangeListener.onParamsChanged();
         }
         mOnDataChangeListener.onWaveChanged(packageDat[1]);
@@ -41,9 +38,9 @@ public class PackageParser
     /**
      * interface for parameters changed.
      */
-    public interface OnDataChangeListener
-    {
+    public interface OnDataChangeListener {
         void onParamsChanged();
+
         void onWaveChanged(int wave);
     }
 
@@ -51,14 +48,12 @@ public class PackageParser
     /**
      * a small collection of Oximeter parameters.
      * you can add more parameters as the manual.
-     *
+     * <p>
      * spo2          Pulse Oxygen Saturation
      * pulseRate     pulse rate
      * pi            perfusion index
-     *
      */
-    public class OxiParams
-    {
+    public class OxiParams {
         public final int SPO2_INVALID_VALUE = 127;
         public final int PULSE_RATE_INVALID_VALUE = 255;
 
@@ -85,8 +80,7 @@ public class PackageParser
         }
     }
 
-    public OxiParams getOxiParams()
-    {
+    public OxiParams getOxiParams() {
         return mOxiParams;
     }
 
